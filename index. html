@@ -1,0 +1,153 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Women Safety SOS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top banner -->
+  <header class="hero">
+    <div class="heroInner">
+      <div class="logo">🛡️</div>
+      <h1>Women Safety SOS</h1>
+      <p>Press the button if you are in danger</p>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Two tabs -->
+    <div class="tabs">
+      <button class="tab on" id="userTab">👩 User</button>
+      <button class="tab" id="policeTab">👮 Police (Demo)</button>
+    </div>
+
+    <!-- ===== USER PAGE ===== -->
+    <div id="userPage">
+
+      <div class="callRow">
+        <a href="tel:999" class="helpline"><b>📞 999</b><small>Police</small></a>
+        <a href="tel:109" class="helpline"><b>📞 109</b><small>Women &amp; Children</small></a>
+      </div>
+
+      <!-- Two SOS buttons: the person chooses -->
+      <div class="sosRow">
+        <button id="sosBtn" class="sosButton">SOS<span>🔔 Loud + siren</span></button>
+        <button id="silentBtn" class="sosButton silent">SOS<span>🤫 Silent</span></button>
+      </div>
+
+      <!-- Countdown ring -->
+      <div id="countdownBox" class="countdownBox">
+        <div class="ring">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle class="ringBg" cx="60" cy="60" r="54"></circle>
+            <circle class="ringFg" id="ringFg" cx="60" cy="60" r="54"></circle>
+          </svg>
+          <div class="ringNum" id="ringNum">5</div>
+        </div>
+        <p class="countdown">Alert will be sent shortly…</p>
+      </div>
+
+      <button id="cancelBtn" class="btn">❌ Cancel (pressed by mistake)</button>
+      <button id="stopSirenBtn" class="btn primary">🔇 Stop siren</button>
+      <button id="safeBtn" class="btn success">✅ I am safe / False alarm</button>
+      <p id="countdownText" class="countdown"></p>
+
+      <!-- This box appears after the countdown -->
+      <section id="resultBox" class="card">
+        <h2>🚨 Your location</h2>
+        <p id="locationText" class="status"></p>
+        <iframe id="mapFrame" class="mapFrame" title="Your location on Google Maps"></iframe>
+
+        <div class="actions">
+          <a href="tel:999" class="tile tileCall"><span class="ic">📞</span><b>Call</b><small>999 Police</small></a>
+          <a id="smsLink" href="#" class="tile tileSms"><span class="ic">💬</span><b>SMS</b><small>Contact + 999</small></a>
+          <a id="whatsappLink" href="#" target="_blank" rel="noopener" class="tile tileWa"><span class="ic">🟢</span><b>WhatsApp</b><small>Trusted person</small></a>
+          <a id="gmailLink" href="#" target="_blank" rel="noopener" class="tile tileMail"><span class="ic">✉️</span><b>Gmail</b><small>Email alert</small></a>
+        </div>
+
+        <p class="note">A website cannot send messages by itself. Tap a tile, then press Send.</p>
+        <p id="policeStatus" class="status"></p>
+      </section>
+
+      <!-- Settings -->
+      <section class="card">
+        <h2>⚙️ Quick settings</h2>
+
+        <div class="setting">
+          <h3>⏱️ Siren timer</h3>
+          <select id="sirenTime">
+            <option value="30">Stop after 30 seconds</option>
+            <option value="60" selected>Stop after 1 minute</option>
+            <option value="300">Stop after 5 minutes</option>
+            <option value="0">Never (I will stop it myself)</option>
+          </select>
+        </div>
+
+        <div class="setting">
+          <h3>📳 Shake SOS</h3>
+          <button id="shakeBtn" class="btn">📳 Turn on Shake SOS</button>
+          <p id="shakeText" class="note">Shake your phone hard 3 times to start a Silent SOS.</p>
+          <button id="shakeTestBtn" class="btn small">🧪 Test shake</button>
+        </div>
+
+        <div class="setting">
+          <h3>📍 Location access</h3>
+          <p id="permText" class="status"></p>
+          <button id="permBtn" class="btn">📍 Allow location access</button>
+        </div>
+      </section>
+
+      <!-- Trusted contact: only 4 boxes -->
+      <section class="card">
+        <h2>👥 Trusted contact</h2>
+        <input id="cName" type="text" placeholder="Name">
+        <input id="cPhone" type="tel" placeholder="Phone number (01XXXXXXXXX)">
+        <input id="cWa" type="tel" placeholder="WhatsApp number (01XXXXXXXXX)">
+        <input id="cMail" type="email" placeholder="Gmail">
+        <button id="saveBtn" class="btn primary">💾 Save</button>
+        <p id="savedText" class="note"></p>
+      </section>
+
+      <section class="card">
+        <h2>📌 Safety tips</h2>
+        <ul>
+          <li>Move towards a crowded or well-lit place.</li>
+          <li>If possible, note or photograph the vehicle number.</li>
+          <li>Share your live location with people you trust.</li>
+          <li>Report harassment or assault immediately to 999 or 109.</li>
+        </ul>
+      </section>
+
+    </div>
+
+    <!-- ===== POLICE PAGE ===== -->
+    <div id="policePage">
+      <div class="banner">
+        ⚠️ <b>Prototype / Simulation:</b> This is NOT connected to a real police system.
+        Alerts are saved in this browser to show how a police dashboard would work.
+        For a demo, open this page in two tabs: one as the user, one as the police.
+      </div>
+
+      <div class="row">
+        <b>📡 Active alerts: <span id="policeCount">0</span></b>
+        <span>
+          <button id="demoBtn" class="mini">➕ Demo alert</button>
+          <button id="clearBtn" class="mini">🗑️ Clear</button>
+        </span>
+      </div>
+
+      <iframe id="policeMap" class="mapFrame" title="Alert location on Google Maps"></iframe>
+
+      <div id="alertList"></div>
+    </div>
+
+    <p class="footer">This is a support tool. If your life is in danger, call 999 first.</p>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

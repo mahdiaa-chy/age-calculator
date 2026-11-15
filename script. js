@@ -1,0 +1,414 @@
+// ---------- 1. HTML elements ----------
+const $ = id => document.getElementById(id);
+
+const userTab = $("userTab"), policeTab = $("policeTab");
+const userPage = $("userPage"), policePage = $("policePage");
+const sosBtn = $("sosBtn"), silentBtn = $("silentBtn");
+const cancelBtn = $("cancelBtn"), stopSirenBtn = $("stopSirenBtn"), safeBtn = $("safeBtn");
+const sirenTime = $("sirenTime"), countdownText = $("countdownText");
+const countdownBox = $("countdownBox"), ringFg = $("ringFg"), ringNum = $("ringNum");
+const resultBox = $("resultBox"), locationText = $("locationText"), mapFrame = $("mapFrame");
+const smsLink = $("smsLink"), whatsappLink = $("whatsappLink"), gmailLink = $("gmailLink");
+const policeStatus = $("policeStatus");
+const shakeBtn = $("shakeBtn"), shakeText = $("shakeText"), shakeTestBtn = $("shakeTestBtn");
+const permText = $("permText"), permBtn = $("permBtn");
+const saveBtn = $("saveBtn"), savedText = $("savedText");
+const policeCount = $("policeCount"), policeMap = $("policeMap");
+const demoBtn = $("demoBtn"), clearBtn = $("clearBtn"), alertList = $("alertList");
+
+// ---------- 2. Variables ----------
+const statusNames = ["🆕 New", "✅ Accepted by police", "🚓 Team dispatched", "🏁 Resolved", "❌ Cancelled (false alarm)"];
+const savedFields = ["cName", "cPhone", "cWa", "cMail"];
+const SHAKE_FORCE = 25;   // how hard the phone must move
+const SHAKES_NEEDED = 3;  // how many hard shakes start the SOS
+
+let secondsLeft = 5, timer;
+let watchId = null, myAlertId = null;
+let myLat = null, myLng = null, myAccuracy = 0, lastMapUpdate = 0;
+let audioContext = null, oscillator = null, sirenTimer = null, sirenStopTimer = null;
+let sirenOn = false, useSiren = false;
+let shakeOn = false, shakeCount = 0, firstShakeTime = 0, lastShakeTime = 0;
+
+// Safe storage (does not crash if the browser blocks it)
+function getItem(key, fallback) {
+  try { const v = localStorage.getItem(key); return v === null ? fallback : v; }
+  catch (e) { return fallback; }
+}
+function setItem(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) {}
+}
+
+// ---------- 3. Trusted contact: save and load ----------
+function saveContacts() {
+  savedFields.forEach(id => setItem("ss_" + id, $(id).value));
+  savedText.textContent = "✅ Saved";
+}
+function loadContacts() {
+  savedFields.forEach(id => { $(id).value = getItem("ss_" + id, ""); });
+}
+saveBtn.onclick = saveContacts;
+
+// ---------- 4. Tabs ----------
+function showTab(isUser) {
+  userPage.style.display = isUser ? "block" : "none";
+  policePage.style.display = isUser ? "none" : "block";
+  userTab.classList.toggle("on", isUser);
+  policeTab.classList.toggle("on", !isUser);
+  if (!isUser) renderPolice();
+}
+userTab.onclick = () => showTab(true);
+policeTab.onclick = () => showTab(false);
+
+// ---------- 5. Location permission ----------
+function showPermission(state) {
+  if (state === "granted") permText.textContent = "✅ Location access: Allowed";
+  else if (state === "denied") permText.textContent = "🚫 Blocked. Tap the lock icon next to the web address and choose Allow.";
+  else permText.textContent = "❓ Not allowed yet. Press the button below.";
+}
+function checkPermission() {
+  if (!navigator.permissions) { permText.textContent = "Press the button below to allow location access."; return; }
+  navigator.permissions.query({ name: "geolocation" }).then(function (result) {
+    showPermission(result.state);
+    result.onchange = () => showPermission(result.state);
+  }).catch(function () {});
+}
+function askPermission() {
+  if (!navigator.geolocation) { permText.textContent = "GPS is not available on this device."; return; }
+  navigator.geolocation.getCurrentPosition(checkPermission, checkPermission);
+}
+permBtn.onclick = askPermission;
+
+// ---------- 6. Siren and vibration ----------
+function prepareAudio() {
+  try {
+    if (audioContext === null) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === "suspended") audioContext.resume();
+  } catch (e) {}
+}
+
+function startSiren() {
+  if (sirenOn || audioContext === null) return;
+  oscillator = audioContext.createOscillator();
+  const volume = audioContext.createGain();
+  oscillator.type = "sawtooth";
+  volume.gain.value = 0.7;
+  oscillator.connect(volume);
+  volume.connect(audioContext.destination);
+  oscillator.start();
+
+  // Sweep between a low and a high tone = siren sound
+  let up = true;
+  sirenTimer = setInterval(function () {
+    oscillator.frequency.cancelScheduledValues(audioContext.currentTime);
+    oscillator.frequency.linearRampToValueAtTime(up ? 1100 : 550, audioContext.currentTime + 0.6);
+    up = !up;
+  }, 600);
+
+  sirenOn = true;
+  stopSirenBtn.style.display = "block";
+
+  const seconds = Number(sirenTime.value);   // 0 = never stop
+  if (seconds > 0) sirenStopTimer = setTimeout(stopSiren, seconds * 1000);
+}
+
+function stopSiren() {
+  if (!sirenOn) return;
+  clearInterval(sirenTimer);
+  clearTimeout(sirenStopTimer);
+  try { oscillator.stop(); } catch (e) {}
+  oscillator = null;
+  sirenOn = false;
+  stopSirenBtn.style.display = "none";
+}
+stopSirenBtn.onclick = stopSiren;
+
+function vibratePhone(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ---------- 7. Shake to start SOS ----------
+function handleMotion(event) {
+  const a = event.accelerationIncludingGravity;
+  if (!a) return;
+  const force = Math.sqrt((a.x || 0) * 2 + (a.y || 0) * 2 + (a.z || 0) ** 2);
+  const now = Date.now();
+
+  if (force > SHAKE_FORCE && now - lastShakeTime > 250) {
+    if (now - firstShakeTime > 2000) { shakeCount = 0; firstShakeTime = now; }
+    shakeCount++;
+    lastShakeTime = now;
+    shakeText.textContent = "📳 Shakes: " + shakeCount + " / " + SHAKES_NEEDED;
+    if (shakeCount >= SHAKES_NEEDED) { shakeCount = 0; shakeDetected(); }
+  }
+}
+
+function shakeDetected() {
+  shakeText.textContent = "📳 Shake detected! Starting Silent SOS…";
+  startCountdown(false);   // shaking is secret, so Silent SOS
+}
+
+function startShakeListening() {
+  window.addEventListener("devicemotion", handleMotion);
+  shakeOn = true;
+  shakeBtn.textContent = "📴 Turn off Shake SOS";
+  shakeText.textContent = "✅ Shake SOS is ON. Shake your phone hard " + SHAKES_NEEDED + " times.";
+}
+
+function stopShakeListening() {
+  window.removeEventListener("devicemotion", handleMotion);
+  shakeOn = false;
+  shakeBtn.textContent = "📳 Turn on Shake SOS";
+  shakeText.textContent = "Shake SOS is OFF.";
+}
+
+shakeBtn.onclick = function () {
+  prepareAudio();
+  if (shakeOn) { stopShakeListening(); return; }
+  if (!window.DeviceMotionEvent) { shakeText.textContent = "This device does not support shake detection. Try a phone."; return; }
+  if (typeof DeviceMotionEvent.requestPermission === "function") {   // iPhone asks first
+    DeviceMotionEvent.requestPermission().then(function (answer) {
+      if (answer === "granted") startShakeListening();
+      else shakeText.textContent = "Permission was not given for motion sensors.";
+    });
+  } else {
+    startShakeListening();
+  }
+};
+shakeTestBtn.onclick = shakeDetected;
+
+// ---------- 8. SOS button and 5 second countdown ----------
+function startCountdown(withSiren) {
+  if (cancelBtn.style.display === "block" || myAlertId !== null) return;
+  useSiren = withSiren;
+  prepareAudio();
+  askPermission();
+  vibratePhone(200);
+
+  secondsLeft = 5;
+  cancelBtn.style.display = "block";
+  countdownBox.style.display = "block";
+  ringNum.textContent = secondsLeft;
+  ringFg.style.strokeDashoffset = 0;
+
+  timer = setInterval(function () {
+    secondsLeft--;
+    ringNum.textContent = Math.max(secondsLeft, 0);
+    ringFg.style.strokeDashoffset = 339.3 * (5 - secondsLeft) / 5;
+    if (secondsLeft <= 0) { stopCountdown(); alertStarted(); }
+  }, 1000);
+}
+
+function stopCountdown() {
+  clearInterval(timer);
+  cancelBtn.style.display = "none";
+  countdownBox.style.display = "none";
+}
+
+sosBtn.onclick = () => startCountdown(true);
+silentBtn.onclick = () => startCountdown(false);
+cancelBtn.onclick = stopCountdown;
+
+function alertStarted() {
+  countdownText.textContent = "";
+  safeBtn.style.display = "block";
+  vibratePhone([500, 200, 500, 200, 500]);
+  if (useSiren) startSiren();
+  myAlertId = Date.now();
+  saveMyAlert();
+  startTracking();
+}
+
+// ---------- 9. Live location ----------
+function startTracking() {
+  resultBox.style.display = "block";
+  resultBox.scrollIntoView({ behavior: "smooth" });
+  if (myLat === null) locationText.textContent = "📍 Finding your location… (please allow GPS)";
+  updateLinks();
+
+  if (!navigator.geolocation) { locationText.textContent = "GPS is not available on this device. Call 999 directly."; return; }
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = navigator.geolocation.watchPosition(locationFound, locationError, { enableHighAccuracy: true });
+}
+
+function locationError(error) {
+  if (error.code === 1) locationText.textContent = "🚫 Permission blocked. Tap the lock icon next to the web address and choose Allow.";
+  else if (error.code === 2) locationText.textContent = "📡 Location not available. Turn on Location services and check your connection.";
+  else if (error.code === 3) locationText.textContent = "⏱️ Location took too long. Please try again.";
+  else locationText.textContent = "⚠️ Could not get location. Call 999 directly.";
+}
+
+function locationFound(position) {
+  myLat = position.coords.latitude.toFixed(6);
+  myLng = position.coords.longitude.toFixed(6);
+  myAccuracy = Math.round(position.coords.accuracy);
+  locationText.textContent = "📍 " + myLat + ", " + myLng + " (±" + myAccuracy + " m)";
+  updateMap();
+  updateLinks();
+  saveMyAlert();
+}
+
+// Google Map (updated at most every 10 seconds)
+function updateMap() {
+  const now = Date.now();
+  if (now - lastMapUpdate < 10000) return;
+  lastMapUpdate = now;
+  mapFrame.src = "https://www.google.com/maps?q=" + myLat + "," + myLng + "&z=16&output=embed";
+  mapFrame.style.display = "block";
+}
+
+// ---------- 10. Message and links ----------
+function buildMessage() {
+  const name = $("cName").value.trim();
+  const hi = name === "" ? "" : "Hi " + name + ", ";
+  if (myLat === null) return hi + "🚨 EMERGENCY! I am in danger. Urgent help needed.";
+  return hi + "🚨 EMERGENCY! I am in danger. Please help quickly. My live location: https://www.google.com/maps?q=" +
+    myLat + "," + myLng + " (accuracy ~" + myAccuracy + " m) Time: " + new Date().toLocaleString("en-GB");
+}
+
+// 01712345678 becomes 8801712345678 (Bangladesh, no + or spaces)
+function toWhatsAppNumber(number) {
+  let d = number.replace(/\D/g, "");
+  if (d.startsWith("0")) d = "88" + d;
+  else if (d.length === 10) d = "880" + d;
+  return d;
+}
+
+function updateLinks() {
+  const text = encodeURIComponent(buildMessage());
+  const phone = $("cPhone").value.trim().replace(/\s/g, "");
+  const wa = $("cWa").value.trim() || phone;
+  const mail = $("cMail").value.trim();
+  const sep = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
+
+  smsLink.href = "sms:" + [phone, "999"].filter(Boolean).join(",") + sep + "body=" + text;
+  whatsappLink.href = wa ? "https://wa.me/" + toWhatsAppNumber(wa) + "?text=" + text : "https://wa.me/?text=" + text;
+  gmailLink.href = "https://mail.google.com/mail/?view=cm&to=" + encodeURIComponent(mail) +
+    "&su=" + encodeURIComponent("🚨 EMERGENCY: I need help") + "&body=" + text;
+}
+
+// ---------- 11. "I am safe / False alarm" ----------
+safeBtn.onclick = function () {
+  stopSiren();
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+
+  const alerts = getAlerts();
+  alerts.forEach(a => { if (a.id === myAlertId) a.status = 4; });
+  saveAlerts(alerts);
+
+  myAlertId = null; myLat = null; myLng = null; lastMapUpdate = 0;
+  mapFrame.style.display = "none";
+  safeBtn.style.display = "none";
+  resultBox.style.display = "none";
+  policeStatus.textContent = "";
+  countdownText.textContent = "✅ Alert cancelled. The police page now shows: false alarm.";
+};
+
+// ---------- 12. Police demo (alerts saved in this browser) ----------
+function getAlerts() {
+  try { return JSON.parse(getItem("ss_alerts", "[]")); } catch (e) { return []; }
+}
+function saveAlerts(list) { setItem("ss_alerts", JSON.stringify(list)); }
+
+function saveMyAlert() {
+  const alerts = getAlerts();
+  let mine = alerts.find(a => a.id === myAlertId);
+  if (!mine) { mine = { id: myAlertId, status: 0 }; alerts.push(mine); }
+  const name = $("cName").value.trim();
+  Object.assign(mine, {
+    name: "User alert", lat: myLat, lng: myLng, acc: myAccuracy,
+    mode: useSiren ? "Loud" : "Silent", time: new Date().toLocaleString("en-GB")
+  });
+  saveAlerts(alerts);
+}
+
+function showOnPoliceMap(a) {
+  policeMap.src = "https://www.google.com/maps?q=" + a.lat + "," + a.lng + "&z=16&output=embed";
+  policeMap.style.display = "block";
+}
+
+function setStatus(id, status) {
+  const alerts = getAlerts();
+  alerts.forEach(a => { if (a.id === id) a.status = status; });
+  saveAlerts(alerts);
+  renderPolice();
+}
+
+function renderPolice() {
+  const alerts = getAlerts().slice().reverse();   // newest first
+  alertList.textContent = "";
+  policeCount.textContent = alerts.filter(a => a.status < 3).length;
+
+  if (alerts.length === 0) {
+    const p = document.createElement("p");
+    p.className = "status";
+    p.textContent = "No alerts yet.";
+    alertList.appendChild(p);
+    policeMap.style.display = "none";
+    return;
+  }
+
+  alerts.forEach(function (a) {
+    const card = document.createElement("div");
+    card.className = "alertCard";
+
+    const top = document.createElement("div");
+    top.className = "alertTop";
+    const title = document.createElement("b");
+    title.textContent = "🚨 " + a.name;
+    const badge = document.createElement("span");
+    badge.className = "badge s" + a.status;
+    badge.textContent = statusNames[a.status];
+    top.append(title, badge);
+
+    const info = document.createElement("p");
+    info.className = "status";
+    info.textContent = (a.lat ? "📍 " + a.lat + ", " + a.lng + " (±" + a.acc + " m)" : "📍 Location not available") +
+      " · " + a.mode + " · " + a.time;
+
+    const btns = document.createElement("div");
+    btns.className = "alertBtns";
+    function add(text, fn) {
+      const b = document.createElement("button");
+      b.className = "mini";
+      b.textContent = text;
+      b.onclick = fn;
+      btns.appendChild(b);
+    }
+    if (a.lat) add("📍 Show map", () => showOnPoliceMap(a));
+    add("Accept", () => setStatus(a.id, 1));
+    add("Dispatch", () => setStatus(a.id, 2));
+    add("Resolve", () => setStatus(a.id, 3));
+
+    card.append(top, info, btns);
+    alertList.appendChild(card);
+  });
+
+  const first = alerts.find(a => a.lat);
+  if (first) showOnPoliceMap(first);
+}
+
+demoBtn.onclick = function () {
+  const alerts = getAlerts();
+  alerts.push({
+    id: Date.now(), status: 0, name: "Demo alert",
+    lat: (22.3569 + Math.random() * 0.02).toFixed(6),   // near Chattogram
+    lng: (91.7832 + Math.random() * 0.02).toFixed(6),
+    acc: 15, mode: "Loud", time: new Date().toLocaleString("en-GB")
+  });
+  saveAlerts(alerts);
+  renderPolice();
+};
+clearBtn.onclick = function () { saveAlerts([]); renderPolice(); };
+
+// When the other tab changes alerts, update this tab too
+window.addEventListener("storage", function (e) {
+  if (e.key !== "ss_alerts") return;
+  renderPolice();
+  const mine = getAlerts().find(a => a.id === myAlertId);
+  if (mine && mine.status < 4) policeStatus.textContent = "👮 Police status: " + statusNames[mine.status];
+});
+
+// ---------- 13. Start ----------
+loadContacts();
+checkPermission();
+showTab(true);

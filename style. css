@@ -1,0 +1,378 @@
+/* ---------- Colors ---------- */
+:root {
+  --bg: #f3f1fa;
+  --card: #ffffff;
+  --field: #f1f0f9;
+  --text: #171a2b;
+  --muted: #6b7089;
+  --line: #e6e4f2;
+  --red: #f43f5e;
+  --red-dark: #be123c;
+  --purple: #7c3aed;
+  --green: #16a34a;
+  --glass: rgba(255, 255, 255, 0.75);
+  --shadow: 0 10px 30px rgba(40, 30, 90, 0.1);
+}
+
+/* Dark mode: used automatically when the phone is in dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0a14;
+    --card: #151326;
+    --field: #1e1b33;
+    --text: #f4f2ff;
+    --muted: #a09bbd;
+    --line: #28243f;
+    --glass: rgba(21, 19, 38, 0.75);
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* ---------- Page ---------- */
+•⁠  ⁠{ box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  line-height: 1.5;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+main {
+  max-width: 480px;
+  margin: -48px auto 0;
+  padding: 0 16px 30px;
+  position: relative;
+}
+
+/* ---------- Top banner ---------- */
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #7c3aed 0%, #e11d48 70%, #fb7185 100%);
+  color: white;
+  text-align: center;
+  padding: calc(30px + env(safe-area-inset-top, 0px)) 20px 84px;
+  border-radius: 0 0 36px 36px;
+}
+
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+}
+.hero::before { width: 180px; height: 180px; top: -60px; left: -40px; }
+.hero::after { width: 140px; height: 140px; bottom: -50px; right: -30px; }
+
+.heroInner { position: relative; max-width: 480px; margin: 0 auto; }
+
+.logo {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  font-size: 1.8rem;
+  line-height: 58px;
+}
+
+.hero h1 { margin: 0; font-size: 1.55rem; letter-spacing: -0.3px; }
+.hero p { margin: 4px 0 0; font-size: 0.92rem; opacity: 0.92; }
+
+/* ---------- Tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+
+.tab {
+  flex: 1;
+  padding: 11px 8px;
+  border: 0;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tab.on {
+  background: linear-gradient(135deg, var(--purple), var(--red));
+  color: white;
+  box-shadow: 0 6px 16px rgba(244, 63, 94, 0.35);
+}
+
+/* ---------- 999 and 109 ---------- */
+.callRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 14px 0 6px;
+}
+
+.helpline {
+  display: block;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--text);
+  text-align: center;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+
+.helpline b { display: block; font-size: 1.05rem; }
+.helpline small { color: var(--muted); font-size: 0.75rem; }
+
+/* ---------- Two big round SOS buttons ---------- */
+.sosRow {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin: 28px 0 14px;
+}
+
+.sosButton {
+  position: relative;
+  width: 148px;
+  height: 148px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, #fda4af, var(--red) 50%, var(--red-dark));
+  color: white;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 0 14px 34px rgba(244, 63, 94, 0.5), inset 0 -8px 14px rgba(0, 0, 0, 0.18);
+}
+
+.sosButton span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.sosButton::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(244, 63, 94, 0.45);
+  animation: pulse 2.2s ease-out infinite;
+}
+
+.sosButton.silent {
+  background: radial-gradient(circle at 30% 25%, #a5b4fc, #6d28d9 55%, #312e81);
+  box-shadow: 0 14px 34px rgba(109, 40, 217, 0.5), inset 0 -8px 14px rgba(0, 0, 0, 0.18);
+}
+.sosButton.silent::after { border-color: rgba(109, 40, 217, 0.45); }
+.sosButton:active { transform: scale(0.95); }
+
+@keyframes pulse {
+  0% { transform: scale(0.96); opacity: 0.9; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sosButton::after { animation: none; }
+}
+
+/* ---------- Countdown ring ---------- */
+.countdownBox { display: none; text-align: center; margin: 6px 0; }
+.ring { position: relative; width: 120px; height: 120px; margin: 0 auto; }
+.ring svg { transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 8; }
+.ringBg { stroke: var(--line); }
+.ringFg {
+  stroke: var(--red);
+  stroke-linecap: round;
+  stroke-dasharray: 339.3;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1s linear;
+}
+.ringNum {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  font-weight: 800;
+}
+
+.countdown { margin: 4px 0 8px; text-align: center; font-weight: 700; color: var(--red); }
+
+/* ---------- Cards ---------- */
+.card {
+  margin: 14px 0;
+  padding: 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+
+.setting { padding: 14px 0; border-top: 1px solid var(--line); }
+.setting:first-of-type { padding-top: 0; border-top: 0; }
+.setting h3 { margin: 0 0 8px; font-size: 0.9rem; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 13px;
+  border: 0;
+  border-radius: 15px;
+  background: var(--field);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn.primary { background: linear-gradient(135deg, var(--purple), var(--red)); color: white; }
+.btn.success { background: var(--green); color: white; }
+.btn.small { padding: 9px; font-size: 0.88rem; }
+
+/* ---------- Action tiles ---------- */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 14px 0 8px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 14px;
+  border-radius: 18px;
+  color: white;
+  text-decoration: none;
+}
+
+.tile .ic { font-size: 1.5rem; }
+.tile b { font-size: 1.02rem; }
+.tile small { font-size: 0.75rem; opacity: 0.92; }
+
+.tileCall { background: linear-gradient(135deg, #e11d48, #fb7185); }
+.tileSms { background: linear-gradient(135deg, #2563eb, #60a5fa); }
+.tileWa { background: linear-gradient(135deg, #16a34a, #4ade80); }
+.tileMail { background: linear-gradient(135deg, #f59e0b, #f97316); }
+
+/* ---------- Form fields ---------- */
+input,
+select {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 13px 14px;
+  border: 2px solid transparent;
+  border-radius: 15px;
+  background: var(--field);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+input:focus,
+select:focus { outline: none; border-color: var(--red); }
+
+/* ---------- Small texts ---------- */
+.status { margin: 6px 0; font-size: 0.88rem; color: var(--muted); word-break: break-word; }
+.note { margin: 6px 0; font-size: 0.8rem; color: var(--muted); }
+.footer { margin-top: 20px; text-align: center; font-size: 0.8rem; color: var(--muted); }
+
+ul { margin: 0; padding: 0; list-style: none; }
+li { position: relative; padding: 7px 0 7px 28px; font-size: 0.93rem; }
+li::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 800; }
+
+/* ---------- Parts that are hidden at the start ---------- */
+#cancelBtn,
+#stopSirenBtn,
+#safeBtn,
+#resultBox,
+#policePage { display: none; }
+
+/* ---------- Google Map box ---------- */
+.mapFrame {
+  display: none;
+  width: 100%;
+  height: 240px;
+  margin: 8px 0;
+  border: 0;
+  border-radius: 18px;
+  background: var(--field);
+}
+
+/* ---------- Police page ---------- */
+.banner {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #fff3cd;
+  color: #664d03;
+  font-size: 0.85rem;
+}
+
+.row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0; }
+
+.mini {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--field);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.alertCard {
+  margin: 10px 0;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+
+.alertTop { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.alertBtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+/* Status colors: s0 New, s1 Accepted, s2 Dispatched, s3 Resolved, s4 Cancelled */
+.badge {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 99px;
+  background: var(--red);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge.s1 { background: #e08a00; }
+.badge.s2 { background: #2563eb; }
+.badge.s3 { background: #16a34a; }
+.badge.s4 { background: #6b7280; }
